@@ -3,7 +3,8 @@ import { analyseFile, deleteFile, getAllFiles, getFile, uploadFile } from "../co
 
 const router = express.Router();
 
-router.post("/upload", uploadFile);
+// router.post("/upload", uploadFile);
+router.get("/upload", uploadFile);
 router.get("/getfile/:id", getFile);
 router.get("/getallfiles", getAllFiles);
 router.delete("/delele/:id", deleteFile);
