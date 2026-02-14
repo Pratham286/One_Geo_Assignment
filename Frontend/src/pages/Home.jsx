@@ -21,8 +21,8 @@ const Home = () => {
       try {
         const response = await axios.get(`${url}/data/getallfiles`);
         console.log("Fetched files:", response.data.data);
-        if(!response.data.success) {
-            console.error("Failed to fetch files:", response.data.error);
+        if (!response.data.success) {
+          console.error("Failed to fetch files:", response.data.error);
         }
         setFiles(response.data.data);
         setCount(response.data.count);
@@ -41,20 +41,21 @@ const Home = () => {
       year: "numeric",
     });
   };
-
+  const handleViewDetails = (fileId) => {
+    window.location.href = `/well/${fileId}`;
+  }
   const handleDelete = async (fileId, fileName) => {
     if (window.confirm(`Are you sure you want to delete ${fileName}?`)) {
       // Your delete API call here
       try {
-       const response = await axios.delete(`${url}/data/delete/${fileId}`);
-    //    console.log(response)
-       if(response.data.success) {
-        setFiles(files.filter((file) => file._id !== fileId));
-        setCount(count - 1);
-       } else {
-        console.error("Failed to delete file:", response.data.error);
-       }
-       
+        const response = await axios.delete(`${url}/data/delete/${fileId}`);
+        //    console.log(response)
+        if (response.data.success) {
+          setFiles(files.filter((file) => file._id !== fileId));
+          setCount(count - 1);
+        } else {
+          console.error("Failed to delete file:", response.data.error);
+        }
       } catch (error) {
         console.error("Error deleting file:", error);
       }
@@ -166,18 +167,26 @@ const Home = () => {
                 </div>
 
                 {/* Card Actions */}
-                <div className="px-4 pb-4 flex space-x-2">
-                  <Link
-                    to={`/visualize/${file._id}`}
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white text-center font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                <div className="flex items-center justify-between gap-2 px-4 pb-4">
+                  <button
+                    onClick={() => handleVisualize(file._id)}
+                    className="flex-1 px-4 py-2 bg-blue-100 text-blue-600 font-medium rounded-lg hover:bg-blue-200 transition-colors duration-200"
                   >
                     Visualize
-                  </Link>
+                  </button>
+
+                  <button
+                    onClick={() => handleViewDetails(file._id)}
+                    className="flex-1 px-4 py-2 bg-gray-100 text-gray-600 font-medium rounded-lg hover:bg-gray-200 transition-colors duration-200"
+                  >
+                    View Details
+                  </button>
+
                   <button
                     onClick={() => handleDelete(file._id, file.originalName)}
-                    className="px-4 py-2 bg-red-100 text-red-600 font-medium rounded-lg hover:bg-red-200 transition-colors duration-200"
+                    className="flex-1 px-4 py-2 bg-red-100 text-red-600 font-medium rounded-lg hover:bg-red-200 transition-colors duration-200"
                   >
-                    <FiTrash2 size={20} />
+                    Delete
                   </button>
                 </div>
               </div>

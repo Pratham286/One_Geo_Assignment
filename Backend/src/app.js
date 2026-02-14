@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors"
 import dataRoutes from "./routes/dataRoutes.js"
+import aiRoutes from "./routes/aiRoutes.js"
 
 const app = express();
 
@@ -19,5 +20,6 @@ app.get("/", (req, res) => {
 });
 
 app.use("/data", dataRoutes);
+app.use("/ai", aiRoutes)
 
 export default app;
