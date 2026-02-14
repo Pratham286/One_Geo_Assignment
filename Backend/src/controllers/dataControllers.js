@@ -320,4 +320,122 @@ export const deleteFile = async (req, res) => {
     });
   }
 };
+
+export const getRangeInfo = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { curves, startDepth, endDepth } = req.query;
+
+    console.log('📊 Fetching range data for file:', id);
+    console.log('📏 Depth range:', startDepth, '-', endDepth);
+    console.log('📈 Curves:', curves);
+
+    // Step 1: Validate file exists
+    const file = await LasData.findById(id);
+    if (!file) {
+      return res.status(404).json({
+        success: false,
+        error: 'File not found'
+      });
+    }
+
+    // Step 2: Validate and parse parameters
+    if (!curves) {
+      return res.status(400).json({
+        success: false,
+        error: 'Curves parameter is required'
+      });
+    }
+
+    const requestedCurves = curves.split(',').map(c => c.trim());
+    const depthStart = startDepth ? parseFloat(startDepth) : file.wellInfo.startDepth;
+    const depthEnd = endDepth ? parseFloat(endDepth) : file.wellInfo.stopDepth;
+
+    // Step 3: Validate curves exist in file
+    const availableCurves = file.curves.map(c => c.name);
+    const invalidCurves = requestedCurves.filter(c => !availableCurves.includes(c));
+    
+    if (invalidCurves.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: `Curves not found in file: ${invalidCurves.join(', ')}`,
+        availableCurves: availableCurves
+      });
+    }
+
+    // Step 4: Validate depth range
+    if (depthStart >= depthEnd) {
+      return res.status(400).json({
+        success: false,
+        error: 'Start depth must be less than end depth'
+      });
+    }
+
+    // Step 5: Build query
+    const query = {
+      fileId: id,
+      depth: { $gte: depthStart, $lte: depthEnd }
+    };
+
+    // Step 6: Fetch data from MongoDB
+    const wellData = await WellData.find(query)
+      .select('depth time values')
+      .sort({ depth: 1 })
+      .lean();
+
+    if (wellData.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'No data found in specified depth range',
+        depthRange: { start: depthStart, end: depthEnd }
+      });
+    }
+
+    console.log(`✅ Found ${wellData.length} data points`);
+
+    // Step 7: Filter to only requested curves
+    const filteredData = wellData.map(point => {
+      const filteredValues = {};
+      requestedCurves.forEach(curve => {
+        if (point.values && point.values[curve] !== undefined) {
+          filteredValues[curve] = point.values[curve];
+        }
+      });
+
+      return {
+        depth: point.depth,
+        time: point.time,
+        values: filteredValues
+      };
+    });
+
+    // Step 8: Return response
+    return res.status(200).json({
+      success: true,
+      count: filteredData.length,
+      data: filteredData,
+      metadata: {
+        fileId: id,
+        wellName: file.wellInfo.wellName,
+        depthRange: {
+          requested: { start: depthStart, end: depthEnd },
+          actual: {
+            start: filteredData[0]?.depth,
+            end: filteredData[filteredData.length - 1]?.depth
+          },
+          unit: file.wellInfo.depthUnit
+        },
+        curves: requestedCurves
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Get Range Info Error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to fetch range data',
+      message: error.message
+    });
+  }
+};
 export const analyseFile = async (req, res) => {};

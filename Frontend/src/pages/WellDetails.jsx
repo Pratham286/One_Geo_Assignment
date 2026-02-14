@@ -81,6 +81,9 @@ const WellDetails = () => {
         const response = await axios.post(`${url}/ai/generate/${id}`, analysisData);
         console.log(response)
         console.log('Analyzing file:', id, analysisData);
+        if(response.data.success) {
+            navigate(`/interpretation/${id}`, { state: { interpretation: response.data.data } });
+        }
         
     } catch (error) {
         console.error("Error during analysis:", error);
