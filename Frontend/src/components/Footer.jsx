@@ -14,7 +14,7 @@ const Footer = () => {
           {/* Left Side - Brand/Copyright */}
           <div className="text-center md:text-left">
             <p className="text-sm text-gray-300">
-              © {currentYear} Well Log Analyzer. All rights reserved.
+              © {currentYear} Well Log Analyzer.
             </p>
           </div>
 
@@ -26,7 +26,7 @@ const Footer = () => {
           {/* Right Side - Social Links */}
           <div className="flex items-center space-x-4">
             <a
-              href="https://github.com/yourusername"
+              href="https://github.com/Pratham286"
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-300 hover:text-white transition-colors duration-200"
@@ -35,7 +35,7 @@ const Footer = () => {
               <FiGithub size={20} />
             </a>
             <a
-              href="https://linkedin.com/in/yourusername"
+              href="https://www.linkedin.com/in/pratham-chaurasiya-a3a96a251/"
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-300 hover:text-white transition-colors duration-200"
@@ -44,7 +44,7 @@ const Footer = () => {
               <FiLinkedin size={20} />
             </a>
             <a
-              href="https://yourportfolio.com"
+              href="https://portfolio-giye.onrender.com/"
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-300 hover:text-white transition-colors duration-200"
