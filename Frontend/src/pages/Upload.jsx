@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   FiUpload,
@@ -8,7 +8,9 @@ import {
   FiAlertCircle,
   FiArrowLeft,
 } from "react-icons/fi";
+import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import axios from "axios";
+import { ApiContext } from "../context/ApiContext";
 
 const Upload = () => {
   const navigate = useNavigate();
@@ -18,8 +20,9 @@ const Upload = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [error, setError] = useState(null);
-  const url = "http://localhost:3000";
-  // Handle drag events
+
+  const {url} = useContext(ApiContext);
+
   const handleDrag = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -30,7 +33,6 @@ const Upload = () => {
     }
   };
 
-  // Handle drop
   const handleDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -41,15 +43,12 @@ const Upload = () => {
     }
   };
 
-  // Handle file selection
   const handleFileSelect = (file) => {
-    // Validate file type
     if (!file.name.toLowerCase().endsWith(".las")) {
       setError("Please select a .las file");
       return;
     }
 
-    // Validate file size (50MB max)
     if (file.size > 50 * 1024 * 1024) {
       setError("File size must be less than 50MB");
       return;
@@ -59,14 +58,12 @@ const Upload = () => {
     setError(null);
   };
 
-  // Handle file input change
   const handleFileInputChange = (e) => {
     if (e.target.files && e.target.files[0]) {
       handleFileSelect(e.target.files[0]);
     }
   };
 
-  // Remove selected file
   const handleRemoveFile = () => {
     setSelectedFile(null);
     setError(null);
@@ -77,7 +74,9 @@ const Upload = () => {
   const handleUpload = async () => {
     if (!selectedFile) return;
 
-    // Your upload logic here
+    setUploading(true);
+    setError(null);
+
     try {
       const formData = new FormData();
       formData.append("file", selectedFile);
@@ -87,34 +86,14 @@ const Upload = () => {
           "Content-Type": "multipart/form-data",
         },
       });
+      setUploading(false);
+      setUploadSuccess(true);
+      navigate(`/well/${response.data.data.fileId}`);
     } catch (error) {
       console.error("Upload failed:", error);
     }
-    console.log("Uploading file:", selectedFile);
-
-    // Example upload simulation
-    setUploading(true);
-    setError(null);
-
-    // Simulate progress
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setUploading(false);
-          setUploadSuccess(true);
-          // Navigate to visualization after 2 seconds
-          setTimeout(() => {
-            navigate("/"); // Replace with actual file ID
-          }, 2000);
-          return 100;
-        }
-        return prev + 10;
-      });
-    }, 200);
   };
 
-  // Format file size
   const formatFileSize = (bytes) => {
     if (bytes === 0) return "0 Bytes";
     const k = 1024;
@@ -123,37 +102,41 @@ const Upload = () => {
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
   };
 
+  if (uploading) {
+    return (
+      <div className="fixed inset-0 bg-white flex flex-col items-center justify-center z-50">
+        <AiOutlineLoading3Quarters
+          className="animate-spin text-blue-600 mb-4"
+          size={64}
+        />
+        <p className="text-gray-600 text-lg font-medium">Uploading...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4">
-        {/* Back Button */}
-        <Link
-          to="/"
+        <button
+          onClick={() => navigate("/")}
           className="inline-flex items-center text-gray-600 hover:text-gray-800 mb-6 transition-colors"
         >
           <FiArrowLeft className="mr-2" size={20} />
           Back to Files
-        </Link>
+        </button>
 
-        {/* Main Card */}
         <div className="max-w-3xl mx-auto">
           <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-8 text-white">
+            <div className="bg-blue-500 px-6 py-8 text-white">
               <div className="flex items-center space-x-3">
                 <FiUpload size={32} />
                 <div>
-                  <h1 className="text-3xl font-bold">Upload LAS File</h1>
-                  <p className="text-blue-100 mt-1">
-                    Upload your well-log data for analysis
-                  </p>
+                  <h1 className="px-2 text-3xl font-bold">Upload LAS File</h1>
                 </div>
               </div>
             </div>
 
-            {/* Body */}
             <div className="p-6 space-y-6">
-              {/* Drag and Drop Area */}
               <div
                 className={`
                   relative border-2 border-dashed rounded-lg p-12 text-center transition-all duration-200
@@ -224,23 +207,6 @@ const Upload = () => {
                 )}
               </div>
 
-              {/* Upload Progress */}
-              {uploading && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm text-gray-600">
-                    <span>Uploading...</span>
-                    <span>{uploadProgress}%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${uploadProgress}%` }}
-                    ></div>
-                  </div>
-                </div>
-              )}
-
-              {/* Success Message */}
               {uploadSuccess && (
                 <div className="flex items-center space-x-2 p-4 bg-green-50 border border-green-200 rounded-lg text-green-800">
                   <FiCheck size={20} />
@@ -250,7 +216,6 @@ const Upload = () => {
                 </div>
               )}
 
-              {/* Error Message */}
               {error && (
                 <div className="flex items-center space-x-2 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
                   <FiAlertCircle size={20} />
@@ -258,7 +223,6 @@ const Upload = () => {
                 </div>
               )}
 
-              {/* Upload Button */}
               <button
                 onClick={handleUpload}
                 disabled={!selectedFile || uploading || uploadSuccess}
@@ -271,55 +235,9 @@ const Upload = () => {
                   }
                 `}
               >
-                {uploading
-                  ? "Uploading..."
-                  : uploadSuccess
-                    ? "Upload Complete!"
-                    : "Upload File"}
+                {uploadSuccess ? "Upload Complete!" : "Upload File"}
               </button>
 
-              {/* Instructions */}
-              <div className="border-t pt-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-3">
-                  Instructions
-                </h3>
-                <ul className="space-y-2 text-sm text-gray-600">
-                  <li className="flex items-start">
-                    <span className="inline-block w-6 h-6 rounded-full bg-blue-100 text-blue-600 text-center mr-2 flex-shrink-0">
-                      1
-                    </span>
-                    <span>
-                      Select a valid LAS (Log ASCII Standard) file from your
-                      computer
-                    </span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="inline-block w-6 h-6 rounded-full bg-blue-100 text-blue-600 text-center mr-2 flex-shrink-0">
-                      2
-                    </span>
-                    <span>File size must be less than 50MB</span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="inline-block w-6 h-6 rounded-full bg-blue-100 text-blue-600 text-center mr-2 flex-shrink-0">
-                      3
-                    </span>
-                    <span>
-                      File will be automatically parsed and stored securely
-                    </span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="inline-block w-6 h-6 rounded-full bg-blue-100 text-blue-600 text-center mr-2 flex-shrink-0">
-                      4
-                    </span>
-                    <span>
-                      You'll be redirected to the visualization page once upload
-                      completes
-                    </span>
-                  </li>
-                </ul>
-              </div>
-
-              {/* Accepted Formats */}
               <div className="bg-gray-50 rounded-lg p-4">
                 <p className="text-sm text-gray-600">
                   <span className="font-semibold">Accepted format:</span> .las

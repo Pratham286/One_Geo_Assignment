@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useContext } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import Plot from "react-plotly.js";
 import axios from "axios";
@@ -12,20 +12,19 @@ import {
   FiActivity,
   FiLoader,
   FiAlertCircle,
-  FiMove,
   FiHome,
   FiDownload,
 } from "react-icons/fi";
+import { ApiContext } from "../context/ApiContext";
 
 const Visualize = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const plotRef = useRef(null);
 
-  // State
   const [file, setFile] = useState(null);
   const [availableCurves, setAvailableCurves] = useState([]);
-  const [selectedCurves, setSelectedCurves] = useState([]); // Changed to array (max 5)
+  const [selectedCurves, setSelectedCurves] = useState([]); 
   const [depthRange, setDepthRange] = useState({ min: 0, max: 0 });
   const [tempDepthRange, setTempDepthRange] = useState({ min: 0, max: 0 });
   const [chartData, setChartData] = useState([]);
@@ -35,21 +34,18 @@ const Visualize = () => {
   const [notification, setNotification] = useState(null);
   const [retryCount, setRetryCount] = useState(0);
   
-  // New state for enhanced controls
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [plotRevision, setPlotRevision] = useState(0);
   const [zoomHistory, setZoomHistory] = useState([]);
   const [currentZoomIndex, setCurrentZoomIndex] = useState(-1);
 
-  const url = import.meta.env.VITE_API_URL || "http://localhost:3000";
+  const {url} = useContext(ApiContext) 
 
-  // Show notification helper
   const showNotification = (message, type = "warning") => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 3000);
   };
 
-  // Fetch file metadata on mount
   useEffect(() => {
     let isMounted = true;
 
@@ -114,7 +110,7 @@ const Visualize = () => {
 
         const response = await axios.get(`${url}/data/rangeinfo/${id}`, {
           params: {
-            curves: selectedCurves.join(','), // Send as comma-separated string
+            curves: selectedCurves.join(','), 
             startDepth: depthRange.min,
             endDepth: depthRange.max,
           },
@@ -150,10 +146,8 @@ const Visualize = () => {
   const handleCurveSelect = (curveName) => {
     setSelectedCurves((prev) => {
       if (prev.includes(curveName)) {
-        // Remove curve if already selected
         return prev.filter((c) => c !== curveName);
       } else {
-        // Add curve if not at max limit
         if (prev.length >= 5) {
           showNotification("Maximum 5 curves can be selected", "warning");
           return prev;
@@ -161,12 +155,11 @@ const Visualize = () => {
         return [...prev, curveName];
       }
     });
-    // Reset zoom history when changing curves
     setZoomHistory([]);
     setCurrentZoomIndex(-1);
   };
 
-  // Validate depth range
+
   const isDepthRangeValid = useMemo(() => {
     if (!file) return false;
 
@@ -180,7 +173,6 @@ const Visualize = () => {
     return minValid && maxValid && orderValid && rangeValid;
   }, [tempDepthRange, file]);
 
-  // Handle depth range change
   const handleApplyDepthRange = () => {
     if (isNaN(tempDepthRange.min) || isNaN(tempDepthRange.max)) {
       setError("Depth values must be valid numbers");
@@ -225,7 +217,6 @@ const Visualize = () => {
     setPlotRevision((prev) => prev + 1);
   };
 
-  // Enhanced zoom controls
   const handleZoomIn = () => {
     if (!plotRef.current) return;
     
@@ -271,12 +262,10 @@ const Visualize = () => {
     showNotification("Zoom reset to original view", "info");
   };
 
-  // Toggle fullscreen
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen);
   };
 
-  // Handle escape key for fullscreen
   useEffect(() => {
     const handleEscape = (e) => {
       if (e.key === "Escape" && isFullscreen) {
@@ -289,22 +278,21 @@ const Visualize = () => {
   }, [isFullscreen]);
   const getColorForIndex = (index) => {
   const colors = [
-    "#3B82F6", // Blue
-    "#10B981", // Green
-    "#F59E0B", // Orange
-    "#EF4444", // Red
-    "#8B5CF6", // Purple
-    "#EC4899", // Pink
+    "#3B82F6", 
+    "#10B981", 
+    "#F59E0B", 
+    "#EF4444", 
+    "#8B5CF6", 
+    "#EC4899", 
   ];
   return colors[index % colors.length];
 };
-  // Prepare Plotly data
+
   const preparePlotlyData = () => {
     if (!chartData || chartData.length === 0 || selectedCurves.length === 0) {
       return [];
     }
 
-    // Create a trace for each selected curve
     return selectedCurves.map((curveName, index) => {
       const xValues = [];
       const yValues = [];
@@ -336,7 +324,6 @@ const Visualize = () => {
     });
   };
 
-  // Prepare Plotly layout with enhanced features
   const preparePlotlyLayout = () => {
     if (selectedCurves.length === 0) return {};
 
@@ -371,7 +358,7 @@ const Visualize = () => {
         showgrid: true,
         gridcolor: "#E5E7EB",
       },
-      showlegend: selectedCurves.length > 1, // Show legend when multiple curves
+      showlegend: selectedCurves.length > 1,
       legend: {
         x: 1.02,
         y: 1,
@@ -391,11 +378,10 @@ const Visualize = () => {
       },
       plot_bgcolor: "#FFFFFF",
       paper_bgcolor: "#F9FAFB",
-      dragmode: "pan", // Default to pan mode
+      dragmode: "pan", 
     };
   };
 
-  // Memoize plotly data for performance
   const plotlyData = useMemo(
     () => preparePlotlyData(),
     [chartData, selectedCurves, file]
@@ -406,17 +392,14 @@ const Visualize = () => {
     [selectedCurves, file, isFullscreen, plotRevision]
   );
 
-  // Filter curves based on search
   const filteredCurves = availableCurves.filter((curve) =>
     curve.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
-  // Handle retry
   const handleRetry = () => {
     setRetryCount((prev) => prev + 1);
   };
 
-  // Download chart as image
   const handleDownloadImage = () => {
     if (!plotRef.current) return;
     
@@ -463,12 +446,12 @@ const Visualize = () => {
               >
                 Retry
               </button>
-              <Link
-                to="/"
+              <button
+                onClick={() => navigate("/")}
                 className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
               >
                 Back to Home
-              </Link>
+              </button>
             </div>
           </div>
         </div>
@@ -800,7 +783,6 @@ const Visualize = () => {
           {/* Chart Area */}
           <div className="lg:col-span-3">
             <div className="bg-white rounded-lg shadow-md p-6">
-              {/* Enhanced Chart Controls */}
               <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
                 <div className="flex items-center gap-2">
                   <button
@@ -891,8 +873,8 @@ const Visualize = () => {
                     displayModeBar: true,
                     displaylogo: false,
                     modeBarButtonsToRemove: ["lasso2d", "select2d"],
-                    scrollZoom: true, // Enable scroll to zoom
-                    doubleClick: "reset", // Double-click to reset
+                    scrollZoom: true,
+                    doubleClick: "reset", 
                     toImageButtonOptions: {
                       format: "png",
                       filename: `${file?.wellInfo?.wellName}_${selectedCurves.length === 1 ? selectedCurves[0] : `${selectedCurves.length}_curves`}_log`,
@@ -927,23 +909,6 @@ const Visualize = () => {
           </div>
         </div>
       </div>
-
-      {/* Animation styles */}
-      <style jsx>{`
-        @keyframes slide-in {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-        .animate-slide-in {
-          animation: slide-in 0.3s ease-out;
-        }
-      `}</style>
     </div>
   );
 };

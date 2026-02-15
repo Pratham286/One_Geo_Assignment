@@ -1,5 +1,4 @@
 import {
-  S3Client,
   PutObjectCommand,
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
@@ -23,7 +22,7 @@ export const uploadFile = async (req, res) => {
       });
     }
 
-    console.log("📁 File received:", req.file.originalname);
+    console.log("File received:", req.file.originalname);
 
     // Prepare S3 upload
     const data = req.file.buffer;
@@ -36,17 +35,16 @@ export const uploadFile = async (req, res) => {
       ContentType: "text/plain",
     };
 
-    // Upload to S3
-    console.log("☁️  Uploading to S3...");
+    console.log("Uploading to S3...");
     await s3.send(new PutObjectCommand(uploadParams));
-    console.log("✅ File uploaded to S3");
+    console.log("File uploaded to S3");
 
     const bucket = process.env.S3_bucket_name;
     const region = process.env.AWS_REGION || "us-east-1";
     const s3Url = `https://${bucket}.s3.${region}.amazonaws.com/${uploadKey}`;
 
     // Parse LAS file
-    console.log("📊 Parsing LAS file...");
+    console.log("Parsing LAS file...");
     const lasFile = new Las(data.toString("utf-8"), { loadFile: false });
 
     const well = await lasFile.wellParams();
@@ -122,11 +120,11 @@ export const uploadFile = async (req, res) => {
     });
 
     console.log(
-      `✅ Parsed ${dataRows.length} data points, ${curvesArray.length} curves`,
+      `Parsed ${dataRows.length} data points, ${curvesArray.length} curves`,
     );
 
     // Create LasData document
-    console.log("💾 Saving to MongoDB...");
+    console.log("Saving to MongoDB...");
     lasDoc = await LasData.create({
       filename: uploadKey.split("/").pop(),
       originalName: req.file.originalname,
@@ -141,7 +139,7 @@ export const uploadFile = async (req, res) => {
       curves: curvesArray,
       status: "processing",
     });
-    console.log("✅ LasData saved, id:", lasDoc._id);
+    console.log("LasData saved, id:", lasDoc._id);
 
     // Bulk insert WellData
     const BATCH_SIZE = 5000;
@@ -158,7 +156,7 @@ export const uploadFile = async (req, res) => {
       const result = await WellData.insertMany(batch, { ordered: false });
       totalInserted += result.length;
     }
-    console.log(`✅ WellData inserted: ${totalInserted} rows`);
+    console.log(`WellData inserted: ${totalInserted} rows`);
 
     // Update status to ready
     await LasData.findByIdAndUpdate(lasDoc._id, {
@@ -167,7 +165,7 @@ export const uploadFile = async (req, res) => {
       "stats.depthRange.min": wellInfo.startDepth,
       "stats.depthRange.max": wellInfo.stopDepth,
     });
-    console.log("✅ LasData marked as ready");
+    console.log("LasData marked as ready");
 
     // Return success
     return res.status(200).json({
@@ -189,12 +187,12 @@ export const uploadFile = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("❌ Upload Error:", error);
+    console.error("Upload Error:", error);
 
     // Cleanup on error
     if (uploadKey) {
       try {
-        console.log("🧹 Cleaning up S3...");
+        console.log("Cleaning up S3...");
         await s3.send(
           new DeleteObjectCommand({
             Bucket: process.env.S3_bucket_name,
@@ -208,7 +206,7 @@ export const uploadFile = async (req, res) => {
 
     if (lasDoc) {
       try {
-        console.log("🧹 Cleaning up MongoDB...");
+        console.log("Cleaning up MongoDB...");
         await LasData.findByIdAndDelete(lasDoc._id);
         await WellData.deleteMany({ fileId: lasDoc._id });
       } catch (dbError) {
@@ -241,7 +239,7 @@ export const getFile = async (req, res) => {
       data: file
     });
   } catch (error) {
-    console.error('❌ Get File Error:', error);
+    console.error('Get File Error:', error);
     return res.status(500).json({
       success: false,
       error: 'Failed to fetch file',
@@ -264,7 +262,7 @@ export const getAllFiles = async (req, res) => {
       data: files,
     });
   } catch (error) {
-    console.error("❌ Get All Files Error:", error);
+    console.error("Get All Files Error:", error);
     return res.status(500).json({
       success: false,
       error: "Failed to fetch files",
@@ -285,7 +283,7 @@ export const deleteFile = async (req, res) => {
       });
     }
 
-    console.log(`🗑️  Deleting file: ${file.originalName}`);
+    console.log(`Deleting file: ${file.originalName}`);
 
     // Delete from S3
     try {
@@ -293,26 +291,24 @@ export const deleteFile = async (req, res) => {
         Bucket: process.env.S3_bucket_name,
         Key: file.s3Key
       }));
-      console.log('✅ Deleted from S3');
+      console.log('Deleted from S3');
     } catch (s3Error) {
-      console.error('⚠️ S3 delete failed:', s3Error.message);
-      // Continue anyway - prioritize DB cleanup
+      console.error('S3 delete failed:', s3Error.message);
     }
 
     // Delete WellData documents
     const wellDataResult = await WellData.deleteMany({ fileId: id });
-    console.log(`✅ Deleted ${wellDataResult.deletedCount} WellData documents`);
+    console.log(`Deleted ${wellDataResult.deletedCount} WellData documents`);
 
-    // Delete LasData document
     await LasData.findByIdAndDelete(id);
-    console.log('✅ Deleted LasData document');
+    console.log('Deleted LasData document');
 
     return res.status(200).json({
       success: true,
       message: 'File deleted successfully'
     });
   } catch (error) {
-    console.error('❌ Delete File Error:', error);
+    console.error('Delete File Error:', error);
     return res.status(500).json({
       success: false,
       error: 'Failed to delete file',
@@ -326,11 +322,10 @@ export const getRangeInfo = async (req, res) => {
     const { id } = req.params;
     const { curves, startDepth, endDepth } = req.query;
 
-    console.log('📊 Fetching range data for file:', id);
-    console.log('📏 Depth range:', startDepth, '-', endDepth);
-    console.log('📈 Curves:', curves);
+    console.log('Fetching range data for file:', id);
+    console.log('Depth range:', startDepth, '-', endDepth);
+    console.log('Curves:', curves);
 
-    // Step 1: Validate file exists
     const file = await LasData.findById(id);
     if (!file) {
       return res.status(404).json({
@@ -339,7 +334,6 @@ export const getRangeInfo = async (req, res) => {
       });
     }
 
-    // Step 2: Validate and parse parameters
     if (!curves) {
       return res.status(400).json({
         success: false,
@@ -351,7 +345,6 @@ export const getRangeInfo = async (req, res) => {
     const depthStart = startDepth ? parseFloat(startDepth) : file.wellInfo.startDepth;
     const depthEnd = endDepth ? parseFloat(endDepth) : file.wellInfo.stopDepth;
 
-    // Step 3: Validate curves exist in file
     const availableCurves = file.curves.map(c => c.name);
     const invalidCurves = requestedCurves.filter(c => !availableCurves.includes(c));
     
@@ -363,7 +356,6 @@ export const getRangeInfo = async (req, res) => {
       });
     }
 
-    // Step 4: Validate depth range
     if (depthStart >= depthEnd) {
       return res.status(400).json({
         success: false,
@@ -371,13 +363,11 @@ export const getRangeInfo = async (req, res) => {
       });
     }
 
-    // Step 5: Build query
     const query = {
       fileId: id,
       depth: { $gte: depthStart, $lte: depthEnd }
     };
 
-    // Step 6: Fetch data from MongoDB
     const wellData = await WellData.find(query)
       .select('depth time values')
       .sort({ depth: 1 })
@@ -391,9 +381,9 @@ export const getRangeInfo = async (req, res) => {
       });
     }
 
-    console.log(`✅ Found ${wellData.length} data points`);
+    console.log(`Found ${wellData.length} data points`);
 
-    // Step 7: Filter to only requested curves
+    // Filter to only requested curves
     const filteredData = wellData.map(point => {
       const filteredValues = {};
       requestedCurves.forEach(curve => {
@@ -409,7 +399,6 @@ export const getRangeInfo = async (req, res) => {
       };
     });
 
-    // Step 8: Return response
     return res.status(200).json({
       success: true,
       count: filteredData.length,
@@ -430,7 +419,7 @@ export const getRangeInfo = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Get Range Info Error:', error);
+    console.error('Get Range Info Error:', error);
     return res.status(500).json({
       success: false,
       error: 'Failed to fetch range data',
@@ -438,4 +427,3 @@ export const getRangeInfo = async (req, res) => {
     });
   }
 };
-export const analyseFile = async (req, res) => {};

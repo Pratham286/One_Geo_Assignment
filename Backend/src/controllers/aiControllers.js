@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai"; // New import
+import { GoogleGenAI } from "@google/genai";
 import { LasData } from "../models/lasData.js";
 import { WellData } from "../models/wellData.js";
 
@@ -12,7 +12,6 @@ function prepareDataForAI(wellData, curves) {
     statistics: {}
   };
 
-  // Calculate statistics for each curve
   curves.forEach(curveName => {
     const values = wellData
       .map(point => point.values[curveName])
@@ -97,9 +96,8 @@ export const AnalyseFile = async (req, res) => {
     const { id } = req.params;
     const { startDepth, endDepth, curves } = req.body;
 
-    console.log("🔍 Analyzing file:", id);
+    console.log("Analyzing file:", id);
 
-    // Step 1: Validate file exists
     const file = await LasData.findById(id);
     if (!file) {
       return res.status(404).json({
@@ -108,29 +106,27 @@ export const AnalyseFile = async (req, res) => {
       });
     }
 
-    // Step 2: Set depth range (use full range if not specified)
+    // Set depth range 
     const depthStart = startDepth || file.wellInfo.startDepth;
     const depthEnd = endDepth || file.wellInfo.stopDepth;
 
-    // Step 3: Determine curves to analyze (use all if not specified)
     const analyzeCurves =
       curves && curves.length > 0
         ? curves
-        : file.curves.slice(0, 5).map((c) => c.name); // First 5 curves if none specified
+        : file.curves.slice(0, 5).map((c) => c.name); 
 
-    console.log(`📊 Analyzing curves: ${analyzeCurves.join(", ")}`);
+    console.log(`Analyzing curves: ${analyzeCurves.join(", ")}`);
     console.log(
-      `📏 Depth range: ${depthStart} - ${depthEnd} ${file.wellInfo.depthUnit}`,
+      `Depth range: ${depthStart} - ${depthEnd} ${file.wellInfo.depthUnit}`,
     );
 
-    // Step 4: Fetch data from MongoDB
     const wellData = await WellData.find({
       fileId: id,
       depth: { $gte: depthStart, $lte: depthEnd },
     })
       .select("depth values")
       .sort({ depth: 1 })
-      .limit(500) // Limit to 500 points to avoid token limits
+      .limit(500)
       .lean();
 
     if (wellData.length === 0) {
@@ -140,12 +136,11 @@ export const AnalyseFile = async (req, res) => {
       });
     }
 
-    console.log(`✅ Found ${wellData.length} data points`);
+    console.log(`Found ${wellData.length} data points`);
 
-    // Step 5: Prepare data for AI
     const dataForAI = prepareDataForAI(wellData, analyzeCurves);
 
-    // Step 6: Create AI prompt
+    // AI prompt
     const prompt = createAnalysisPrompt(
       file,
       depthStart,
@@ -154,8 +149,7 @@ export const AnalyseFile = async (req, res) => {
       dataForAI,
     );
 
-// Step 7: Call Gemini API using the new SDK
-    console.log("🤖 Calling Gemini API...");
+    console.log("Calling Gemini API...");
     const ai = new GoogleGenAI({ apiKey: process.env.Gemini_API_Key });
     
     const result = await ai.models.generateContent({
@@ -163,11 +157,11 @@ export const AnalyseFile = async (req, res) => {
         contents: prompt,
     });
     
-    const interpretation = result.text; // Note: 'text' is now a property, not a method()
+    const interpretation = result.text;
 
-    console.log("✅ AI analysis complete");
-    console.log("📄 Interpretation:", interpretation);
-    // Step 8: Return response
+    console.log("AI analysis complete");
+    console.log("Interpretation:", interpretation);
+
     return res.status(200).json({
       success: true,
       data: {
