@@ -7,11 +7,15 @@ dotenv.config({
   path: ".env",
 });
 
-
-app.use(cors({
-  origin: "https://one-geo-assignment.onrender.com/",
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: [
+      "https://one-geo-assignment-1.onrender.com/",
+      "http://localhost:5173",
+    ],
+    credentials: true,
+  }),
+);
 
 connectDB();
 
