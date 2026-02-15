@@ -1,0 +1,11 @@
+# Editor folders
+.vs/
+.vscode/
+
+# Node
+node_modules/
+dist/
+build/
+
+# Env
+.env
